@@ -7,6 +7,7 @@
 - 简单易用的 JSON-RPC 接口定义
 - 自动参数验证和错误处理
 - 兼容 FastAPI 的路由和依赖注入机制
+- RpcAPI 自动文档  
 
 ## 安装
 
@@ -144,6 +145,15 @@ asyncio.run(main())
 ```sh
 python examples/client.py
 ```
+## RpcAPI 自动文档
+
+- Swagger UI
+
+![1.png](resources/1.png)
+
+- ReDoc
+
+![2.png](resources/2.png)
 
 ## 许可证
 
