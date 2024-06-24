@@ -5,6 +5,10 @@ on:
     tags:
       - 'v*.*.*'  # 仅匹配类似 v1.0.0 的标签
 
+permissions:
+  id-token: write  # 允许请求 OIDC JWT
+  contents: read   # 允许 actions/checkout 使用
+
 jobs:
   release-build:
     runs-on: ubuntu-latest
