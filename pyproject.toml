@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "kylin-rpc"
-version = "0.1.0"
+version = "0.0.1"
 description = "A simple JSON-RPC implementation for FastAPI"
 authors = ["Kylin <your.email@example.com>"]
 license = "MIT"
@@ -22,3 +22,6 @@ sphinx-rtd-theme = "^2.0.0"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.packages]
+krpc = { from = "krpc" }
