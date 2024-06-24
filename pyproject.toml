@@ -1,12 +1,18 @@
 [tool.poetry]
 name = "kylin-rpc"
 version = "0.0.1"
-description = "A simple JSON-RPC implementation for FastAPI"
+description = "RPC implementation for FastAPI"
 authors = ["Kylin <your.email@example.com>"]
 license = "MIT"
 readme = "README.md"
 packages = [
-    { include = "krpc"},
+    { include = "krpc" },
+]
+
+classifiers = [
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
 ]
 
 [tool.poetry.dependencies]
@@ -25,3 +31,9 @@ sphinx-rtd-theme = "^2.0.0"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[project.urls]
+Homepage = "https://github.com/InfernalAzazel/kylin-rpc.git"
+Documentation = "https://infernalazazel.github.io/kylin-rpc/"
+Repository = "https://github.com/InfernalAzazel/kylin-rpc.git"
+Issues = "https://github.com/InfernalAzazel/kylin-rpc/issues"
