@@ -16,13 +16,13 @@
 使用 [Poetry](https://python-poetry.org/) 进行安装：
 
 ```sh
-poetry add kylin-rpc
+poetry add kylin-rpc fastapi
 ```
 
 或者使用 `pip` 进行安装：
 
 ```sh
-pip install kylin-rpc
+pip install kylin-rpc fastapi
 ```
 
 ## 快速开始
@@ -34,13 +34,24 @@ pip install kylin-rpc
 ```python
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
+from starlette.requests import Request
 
-from krpc import Entrypoint, JsonRpcException
+from krpc import Entrypoint, RpcException, RpcErrorCode, EncoderModelResponse
 
-app = FastAPI(title="krpc API")
-
+app = FastAPI(title="kylin-rpc API")
 # 创建一个 JSON-RPC 入口点
 api_v1 = Entrypoint('/api/v1/jsonrpc')
+
+
+# 处理全局异常
+@app.exception_handler(RpcException)
+async def unicorn_exception_handler(request: Request, exc: RpcException):
+    content_type = request.headers.get("Content-Type", "").lower()
+    decoder = api_v1.decoders.get(content_type) or api_v1.default_decoder
+    decoder.create_response()
+    return EncoderModelResponse(
+        error=exc.to_dict
+    )
 
 
 class AddParams(BaseModel):
@@ -54,7 +65,7 @@ async def add(params: AddParams) -> int:
     a = params.a
     b = params.b
     if a is None or b is None:
-        raise JsonRpcException(code=-32602, message="Invalid params")
+        raise RpcException.parse(RpcErrorCode.INVALID_PARAMS)
     return a + b
 
 
@@ -64,7 +75,7 @@ async def subtract(params: AddParams) -> int:
     a = params.a
     b = params.b
     if a is None or b is None:
-        raise JsonRpcException(code=-32602, message="Invalid params")
+        raise RpcException.parse(RpcErrorCode.INVALID_PARAMS)
     return a - b
 
 
@@ -83,7 +94,7 @@ if __name__ == "__main__":
 确保已经安装了依赖，可以运行以下命令来启动服务：
 
 ```sh
-poetry run uvicorn examples.main:app --reload
+python examples/basic/main.py
 ```
 
 现在，你可以发送 JSON-RPC 请求到 `http://localhost:8000/api/v1/jsonrpc` 来调用定义的方法。例如：
@@ -110,7 +121,7 @@ poetry run uvicorn examples.main:app --reload
 
 ### 客户端
 
-在 `examples/client.py` 中编写测试代码：
+在 `examples/basic/client.py` 中编写测试代码：
 
 ```python
 import asyncio
@@ -121,25 +132,22 @@ from httpx import AsyncClient
 async def main():
     async with AsyncClient() as client:
         response = await client.post("http://127.0.0.1:8000/api/v1/jsonrpc", json={
-            "jsonrpc": "2.0",
             "method": "add",
             "params": {"a": 1, "b": 2},
             "id": 1
         })
         response_json = response.json()
         print(f"Response JSON: {response_json}")
-        # response = await client.post("http://127.0.0.1:8000/api/v1/jsonrpc", json={
-        #     "jsonrpc": "2.0",
-        #     "method": "add",
-        #     "params": {"a": 1},
-        #     "id": 2
-        # })
-        # response_json = response.text
-        # print(f"Response JSON: {response_json}")
+        response = await client.post("http://127.0.0.1:8000/api/v1/jsonrpc", json={
+            "method": "add",
+            "params": {"a": 1},
+            "id": 2
+        })
+        response_json = response.text
+        print(f"Response JSON: {response_json}")
 
 
 asyncio.run(main())
-
 ```
 
 运行：

@@ -1,12 +1,23 @@
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
+from starlette.requests import Request
 
-from krpc import Entrypoint, JsonRpcException
+from krpc import Entrypoint, RpcException, RpcErrorCode, EncoderModelResponse
 
 app = FastAPI(title="kylin-rpc API")
-
 # 创建一个 JSON-RPC 入口点
 api_v1 = Entrypoint('/api/v1/jsonrpc')
+
+
+# 处理全局异常
+@app.exception_handler(RpcException)
+async def unicorn_exception_handler(request: Request, exc: RpcException):
+    content_type = request.headers.get("Content-Type", "").lower()
+    decoder = api_v1.decoders.get(content_type) or api_v1.default_decoder
+    decoder.create_response()
+    return EncoderModelResponse(
+        error=exc.to_dict
+    )
 
 
 class AddParams(BaseModel):
@@ -20,7 +31,7 @@ async def add(params: AddParams) -> int:
     a = params.a
     b = params.b
     if a is None or b is None:
-        raise JsonRpcException(code=-32602, message="Invalid params")
+        raise RpcException.parse(RpcErrorCode.INVALID_PARAMS)
     return a + b
 
 
@@ -30,7 +41,7 @@ async def subtract(params: AddParams) -> int:
     a = params.a
     b = params.b
     if a is None or b is None:
-        raise JsonRpcException(code=-32602, message="Invalid params")
+        raise RpcException.parse(RpcErrorCode.INVALID_PARAMS)
     return a - b
 
 

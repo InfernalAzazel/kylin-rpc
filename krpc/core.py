@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Request
-
 from .decoders import Decoder, JsonDecoder, MsgpackDecoder
-from .models import JsonRpcErrorModel
-from .response import JsonRPCResponse
+from .errors import RpcErrorCode, RpcException
+from .response import EncoderModelResponse
 
 
 class Entrypoint(APIRouter):
@@ -20,14 +19,16 @@ class Entrypoint(APIRouter):
             "application/json": JsonDecoder(),
             "application/x-msgpack": MsgpackDecoder()
         }
-        self.add_api_route(self.path, self.jsonrpc_endpoint, methods=["POST"])
+        self.add_api_route(self.path, self.rpc_endpoint, methods=["POST"])
 
-    async def jsonrpc_endpoint(self, request: Request):
+    async def rpc_endpoint(self, request: Request):
         content_type = request.headers.get("Content-Type", "").lower()
         decoder = self.decoders.get(content_type) or self.default_decoder
 
         if not decoder:
-            return JsonRPCResponse(error=JsonRpcErrorModel(code=-32700, message="Unsupported Content-Type"))
+            return EncoderModelResponse(
+                error=RpcException.parse(RpcErrorCode.UNSUPPORTED_CONTENT_TYPE)
+            )
 
         response = await decoder.handle(request, self.routes)
         return response

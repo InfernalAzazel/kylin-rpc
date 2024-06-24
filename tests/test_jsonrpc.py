@@ -1,21 +1,32 @@
+from typing import Any
+
 import pytest
-from httpx import AsyncClient
-from fastapi import FastAPI
-from krpc import Entrypoint, JsonRpcException
+from fastapi import FastAPI, Request
+from httpx import AsyncClient, ASGITransport
+
+from krpc import Entrypoint, RpcException, RpcErrorCode, EncoderModelResponse
 
 
 @pytest.fixture
 def app() -> FastAPI:
     app = FastAPI()
-
     api_v1 = Entrypoint('/api/v1/jsonrpc')
+
+    @app.exception_handler(RpcException)
+    async def unicorn_exception_handler(request: Request, exc: RpcException):
+        content_type = request.headers.get("Content-Type", "").lower()
+        decoder = api_v1.decoders.get(content_type) or api_v1.default_decoder
+        decoder.create_response()
+        return EncoderModelResponse(
+            error=exc.to_dict
+        )
 
     @api_v1.method
     async def add(params: dict) -> int:
         a = params.get("a")
         b = params.get("b")
         if a is None or b is None:
-            raise JsonRpcException(code=-32602, message="Invalid params")
+            raise RpcException.parse(RpcErrorCode.INVALID_PARAMS)
         return a + b
 
     @api_v1.method
@@ -23,7 +34,7 @@ def app() -> FastAPI:
         a = params.get("a")
         b = params.get("b")
         if a is None or b is None:
-            raise JsonRpcException(code=-32602, message="Invalid params")
+            raise RpcException.parse(RpcErrorCode.INVALID_PARAMS)
         return a - b
 
     app.include_router(api_v1)
@@ -31,10 +42,10 @@ def app() -> FastAPI:
 
 
 @pytest.mark.asyncio
-async def test_add(app: FastAPI):
-    async with AsyncClient(app=app, base_url="http://test") as client:
+async def test_add(app: Any):
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.post("/api/v1/jsonrpc", json={
-            "jsonrpc": "2.0",
             "method": "add",
             "params": {"a": 1, "b": 2},
             "id": 1
@@ -43,7 +54,6 @@ async def test_add(app: FastAPI):
         print(f"Response JSON for test_add: {response_json}")
         assert response.status_code == 200
         assert response_json == {
-            "jsonrpc": "2.0",
             "id": 1,
             "result": 3,
             "error": None
@@ -51,10 +61,10 @@ async def test_add(app: FastAPI):
 
 
 @pytest.mark.asyncio
-async def test_subtract(app: FastAPI):
-    async with AsyncClient(app=app, base_url="http://test") as client:
+async def test_subtract(app: Any):
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.post("/api/v1/jsonrpc", json={
-            "jsonrpc": "2.0",
             "method": "subtract",
             "params": {"a": 5, "b": 3},
             "id": 2
@@ -63,7 +73,6 @@ async def test_subtract(app: FastAPI):
         print(f"Response JSON for test_subtract: {response_json}")
         assert response.status_code == 200
         assert response_json == {
-            "jsonrpc": "2.0",
             "id": 2,
             "result": 2,
             "error": None
@@ -71,10 +80,10 @@ async def test_subtract(app: FastAPI):
 
 
 @pytest.mark.asyncio
-async def test_invalid_params(app: FastAPI):
-    async with AsyncClient(app=app, base_url="http://test") as client:
+async def test_invalid_params(app: Any):
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.post("/api/v1/jsonrpc", json={
-            "jsonrpc": "2.0",
             "method": "add",
             "params": {"a": 1},
             "id": 3,
@@ -83,21 +92,17 @@ async def test_invalid_params(app: FastAPI):
         response_json = response.json()
         print(f"Response JSON for test_invalid_params: {response_json}")
         assert response_json == {
-            "jsonrpc": "2.0",
             "id": 3,
-            "error": {
-                "code": -32602,
-                "message": "Invalid params",
-                "data": None
-            }
+            'result': None,
+            "error": RpcException.parse(RpcErrorCode.INVALID_PARAMS)
         }
 
 
 @pytest.mark.asyncio
-async def test_method_not_found(app: FastAPI):
-    async with AsyncClient(app=app, base_url="http://test") as client:
+async def test_method_not_found(app: Any):
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.post("/api/v1/jsonrpc", json={
-            "jsonrpc": "2.0",
             "method": "multiply",
             "params": {"a": 2, "b": 3},
             "id": 4
@@ -106,11 +111,7 @@ async def test_method_not_found(app: FastAPI):
         response_json = response.json()
         print(f"Response JSON for test_method_not_found: {response_json}")
         assert response_json == {
-            "jsonrpc": "2.0",
             "id": 4,
-            "error": {
-                "code": -32601,
-                "message": "Method not found",
-                "data": None
-            }
+            'result': None,
+            "error": RpcException.parse(RpcErrorCode.METHOD_NOT_FOUND)
         }
