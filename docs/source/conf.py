@@ -18,7 +18,14 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
     'sphinx.ext.viewcode',
+    'myst_parser'
 ]
+
+# 支持 .md 文件
+source_suffix = ['.rst', '.md']
+
+# Optional: 设置 master 文档（如果你的主文档是 index.md）
+master_doc = 'index'
 
 templates_path = ['_templates']
 exclude_patterns = []

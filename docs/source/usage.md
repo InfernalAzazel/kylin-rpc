@@ -1,31 +1,6 @@
-# krpc
+使用
+=====================================
 
-`krpc` 是一个用于在 FastAPI 中实现 RPC（远程过程调用）接口的简单库。它提供了一种方便的方式来定义和处理 RPC 请求和响应。
-
-## 功能
-
-- 简单易用的 RPC 接口定义
-- 自动参数验证和错误处理
-- 兼容 FastAPI 的路由和依赖注入机制
-- RpcAPI 自动文档  
-- 支持多种解码
-- 高性能处理
-
-## 安装
-
-使用 [Poetry](https://python-poetry.org/) 进行安装：
-
-```sh
-poetry add kylin-rpc fastapi msgpack
-```
-
-或者使用 `pip` 进行安装：
-
-```sh
-pip install kylin-rpc fastapi msgpack
-```
-
-## 快速开始
 
 ### 创建 FastAPI 应用并定义 JSON-RPC 方法
 
@@ -151,20 +126,5 @@ asyncio.run(main())
 运行：
 
 ```sh
-python examples/client.py
+python examples/basic/client.py
 ```
-## RpcAPI 自动文档
-
-- Swagger UI
-
-![1.png](resources/1.png)
-
-- ReDoc
-
-![2.png](resources/2.png)
-
-## 许可证
-
-MIT License
-
-版权所有（c）2024 Kylin
