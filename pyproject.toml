@@ -5,6 +5,9 @@ description = "A simple JSON-RPC implementation for FastAPI"
 authors = ["Kylin <your.email@example.com>"]
 license = "MIT"
 readme = "README.md"
+packages = [
+    { include = "krpc"},
+]
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -22,6 +25,3 @@ sphinx-rtd-theme = "^2.0.0"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
-
-[tool.poetry.packages]
-krpc = { from = "krpc" }
