@@ -7,7 +7,7 @@
 - 简单易用的 RPC 接口定义
 - 自动参数验证和错误处理
 - 兼容 FastAPI 的路由和依赖注入机制
-- RpcAPI 自动文档  
+- 得益于 FastAPI 实现 KrpcAPI 自动文档
 - 支持多种解码
 - 高性能处理
 
@@ -27,18 +27,21 @@ pip install kylin-rpc fastapi msgpack
 
 ## 快速开始
 
-### 创建 FastAPI 应用并定义 JSON-RPC 方法
-
 在 `examples/basic/main.py` 中创建一个 FastAPI 应用，并定义一些 JSON-RPC 方法：
 
 ```python
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
 from starlette.requests import Request
+from krpc import Entrypoint, RpcException, RpcErrorCode
 
-from krpc import Entrypoint, RpcException, RpcErrorCode, EncoderModelResponse
 
-app = FastAPI(title="kylin-rpc API")
+class OperationParams(BaseModel):
+    a: int = Field(..., json_schema_extra={"example": 3}, description='A 变量')
+    b: int = Field(..., json_schema_extra={"example": 3}, description='B 变量')
+
+
+app = FastAPI(title="Krpc API")
 # 创建一个 JSON-RPC 入口点
 api_v1 = Entrypoint('/api/v1/jsonrpc')
 
@@ -46,37 +49,25 @@ api_v1 = Entrypoint('/api/v1/jsonrpc')
 # 处理全局异常
 @app.exception_handler(RpcException)
 async def unicorn_exception_handler(request: Request, exc: RpcException):
-    content_type = request.headers.get("Content-Type", "").lower()
-    decoder = api_v1.decoders.get(content_type) or api_v1.default_decoder
-    decoder.create_response()
-    return EncoderModelResponse(
-        error=exc.to_dict
-    )
-
-
-class AddParams(BaseModel):
-    a: int = Field(..., example=3, description='A 变量')
-    b: int = Field(..., example=3, description='B 变量')
+    message = api_v1.get_message(request)
+    return message.response_handle(error=exc.to_dict)
 
 
 # 定义一个 JSON-RPC 方法 add
 @api_v1.method
-async def add(params: AddParams) -> int:
-    a = params.a
-    b = params.b
-    if a is None or b is None:
+async def add(params: OperationParams, speak: str) -> int:
+    print(speak)
+    if params.a is None or params.b is None:
         raise RpcException.parse(RpcErrorCode.INVALID_PARAMS)
-    return a + b
+    return params.a + params.b
 
 
 # 定义一个 JSON-RPC 方法 subtract
 @api_v1.method
-async def subtract(params: AddParams) -> int:
-    a = params.a
-    b = params.b
-    if a is None or b is None:
+async def subtract(params: OperationParams) -> int:
+    if params.a is None or params.b is None:
         raise RpcException.parse(RpcErrorCode.INVALID_PARAMS)
-    return a - b
+    return params.a - params.b
 
 
 # 将 JSON-RPC 入口点注册到 FastAPI 应用中
@@ -99,50 +90,42 @@ python examples/basic/main.py
 
 现在，你可以发送 JSON-RPC 请求到 `http://localhost:8000/api/v1/jsonrpc` 来调用定义的方法。例如：
 
-**Add 方法请求**
-```json
-{
-  "method": "add",
-  "params": {"a": 1, "b": 2},
-  "id": 1
-}
-```
-
-**Subtract 方法请求**
-```json
-{
-  "method": "subtract",
-  "params": {"a": 5, "b": 3},
-  "id": 2
-}
-```
-
 ### 客户端
 
-在 `examples/basic/client.py` 中编写测试代码：
+在 `examples/basic/client.py` 中编写的代码：
 
 ```python
 import asyncio
+from pydantic import BaseModel
 
-from httpx import AsyncClient
+from krpc import RpcClient
+
+
+class OperationParams(BaseModel):
+    a: int
+    b: int
+
+
+class AddParams(BaseModel):
+    params: OperationParams
+    speak: str
+    model_config = {
+        'method_name': 'add'
+    }
 
 
 async def main():
-    async with AsyncClient() as client:
-        response = await client.post("http://127.0.0.1:8000/api/v1/jsonrpc", json={
-            "method": "add",
-            "params": {"a": 1, "b": 2},
-            "id": 1
-        })
-        response_json = response.json()
-        print(f"Response JSON: {response_json}")
-        response = await client.post("http://127.0.0.1:8000/api/v1/jsonrpc", json={
-            "method": "add",
-            "params": {"a": 1},
-            "id": 2
-        })
-        response_json = response.text
-        print(f"Response JSON: {response_json}")
+    rpc_client = RpcClient(url="http://127.0.0.1:8000/api/v1/jsonrpc")
+
+    params = AddParams(params=OperationParams(a=1, b=2), speak="hello")
+    response = rpc_client.call_model(params)
+    print(f"同步调用结果: {response}")
+
+    response = await rpc_client.call_model_async(params)
+    print(f"异步调用结果: {response}")
+
+    response = rpc_client.call('add', {'params': {"a": 1, "b": 2}})
+    print(f"同步少参调用结果: {response}")
 
 
 asyncio.run(main())
@@ -151,8 +134,18 @@ asyncio.run(main())
 运行：
 
 ```sh
-python examples/client.py
+python examples/basic/client.py
 ```
+
+如果不出意外你会看到类似如下输出:
+
+```shell
+同步调用结果: {'id': '8ad9a6cc-d332-4c3f-b6f8-ba734b773a34', 'result': 3, 'error': None}
+异步调用结果: {'id': 'da25ef99-5fc4-4e01-8393-b3afad5a0eaa', 'result': 3, 'error': None}
+同步少参调用结果: {'id': '16a913d6-8930-4178-ae1c-ce9ee757883e', 'result': None, 'error': {'code': -32602, 'message': 'Invalid params', 'data': 'Missing required parameter: speak'}}
+```
+
+
 ## RpcAPI 自动文档
 
 - Swagger UI

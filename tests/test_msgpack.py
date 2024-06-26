@@ -1,5 +1,4 @@
 from typing import Any
-
 import pytest
 from fastapi import FastAPI, Request
 from httpx import ASGITransport
@@ -7,8 +6,9 @@ from pydantic import BaseModel, Field
 
 from krpc import Entrypoint, RpcException, RpcErrorCode, RpcClient
 
-service_url = '/api/v1/jsonrpc'
+service_url = '/api/v1/msgpack_rpc'
 test_url = 'http://test' + service_url
+rpc_media_type: str = 'msgpack'
 
 
 class OperationParams(BaseModel):
@@ -61,7 +61,7 @@ def app() -> FastAPI:
 @pytest.mark.asyncio
 async def test_add(app: Any):
     transport = ASGITransport(app=app)
-    client = RpcClient(url=test_url, transport=transport)
+    client = RpcClient(url=test_url, rpc_media_type=rpc_media_type, transport=transport)
     params = AddParams(params=OperationParams(a=1, b=2), speak="hello")
     data = await client.call_model_async(params)
     print(f"Response JSON for test_add: {data}")
@@ -71,7 +71,7 @@ async def test_add(app: Any):
 @pytest.mark.asyncio
 async def test_subtract(app: Any):
     transport = ASGITransport(app=app)
-    client = RpcClient(url=test_url, transport=transport)
+    client = RpcClient(url=test_url, rpc_media_type=rpc_media_type, transport=transport)
     params = SubtractParams(params=OperationParams(a=5, b=3))
     data = await client.call_model_async(params)
     print(f"Response JSON for test_subtract: {data}")
@@ -81,7 +81,7 @@ async def test_subtract(app: Any):
 @pytest.mark.asyncio
 async def test_invalid_params(app: Any):
     transport = ASGITransport(app=app)
-    client = RpcClient(url=test_url, transport=transport)
+    client = RpcClient(url=test_url, rpc_media_type=rpc_media_type, transport=transport)
     params = AddParams(params=OperationParams(a=5, b=3))
     data = await client.call_model_async(params)
     print(f"Response JSON for test_invalid_params: {data}")
@@ -98,7 +98,7 @@ async def test_method_not_found(app: Any):
         }
 
     transport = ASGITransport(app=app)
-    client = RpcClient(url=test_url, transport=transport)
+    client = RpcClient(url=test_url, rpc_media_type=rpc_media_type, transport=transport)
     params = MultiplyParams(params=OperationParams(a=5, b=3))
     data = await client.call_model_async(params)
     print(f"Response JSON for test_method_not_found: {data}")

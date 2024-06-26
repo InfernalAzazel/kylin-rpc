@@ -18,7 +18,10 @@ class AddParams(BaseModel):
 
 
 async def main():
-    rpc_client = RpcClient(url="http://127.0.0.1:8000/api/v1/jsonrpc")
+    rpc_client = RpcClient(
+        url="http://127.0.0.1:8000/api/v1/gzip/jsonrpc",
+        rpc_media_type='gzip-json',  # <== 指定我们自定义的加解码器
+    )
 
     params = AddParams(params=OperationParams(a=1, b=2), speak="hello")
     response = rpc_client.call_model(params)
