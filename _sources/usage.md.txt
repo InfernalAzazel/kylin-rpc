@@ -167,8 +167,6 @@ message_management['gzip-json'] = GzipJsonMessage()
 
 在 `examples/cust_messages/main.py` 例子中创建一个 FastAPI 应用，并定义一些 GzipJSON-RPC 方法：
 
-- 
-
 ```python
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
@@ -292,7 +290,7 @@ python examples/cust_messages/client.py
 同步少参调用结果: {'id': '16a913d6-8930-4178-ae1c-ce9ee757883e', 'result': None, 'error': {'code': -32602, 'message': 'Invalid params', 'data': 'Missing required parameter: speak'}}
 ```
 
-### 消息编码器默认支持
+### 消息编码器支持
 
 - `krpc` 内置支持以下几种消息编码器
 - 允许编码器自定义，以满足多样化的数据传输和存储需求：

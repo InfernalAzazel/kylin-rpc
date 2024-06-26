@@ -55,7 +55,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#id5">自定义消息解码器</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#id6">运行示例</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#id7">客户端</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#id8">消息编码器默认支持</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id8">消息编码器支持</a></li>
 </ul>
 </li>
 </ul>
@@ -241,9 +241,6 @@
 </pre></div>
 </div>
 <p>在 <code class="docutils literal notranslate"><span class="pre">examples/cust_messages/main.py</span></code> 例子中创建一个 FastAPI 应用，并定义一些 GzipJSON-RPC 方法：</p>
-<ul class="simple">
-<li></li>
-</ul>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">fastapi</span> <span class="kn">import</span> <span class="n">FastAPI</span>
 <span class="kn">from</span> <span class="nn">pydantic</span> <span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">Field</span>
 <span class="kn">from</span> <span class="nn">starlette.requests</span> <span class="kn">import</span> <span class="n">Request</span>
@@ -361,7 +358,7 @@
 </div>
 </section>
 <section id="id8">
-<h2>消息编码器默认支持<a class="headerlink" href="#id8" title="Link to this heading"></a></h2>
+<h2>消息编码器支持<a class="headerlink" href="#id8" title="Link to this heading"></a></h2>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">krpc</span></code> 内置支持以下几种消息编码器</p></li>
 <li><p>允许编码器自定义，以满足多样化的数据传输和存储需求：</p></li>
