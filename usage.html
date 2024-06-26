@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>使用 &mdash; kylin-rpc v0.0.1 文档</title>
+  <title>使用 &mdash; kylin-rpc v0.0.2 文档</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
 
@@ -15,7 +15,7 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="_static/documentation_options.js?v=7cf98a4c"></script>
+        <script src="_static/documentation_options.js?v=4bb3ce62"></script>
         <script src="_static/doctools.js?v=9a2dae69"></script>
         <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
         <script src="_static/translations.js?v=beaddf03"></script>
@@ -49,9 +49,13 @@
 <li class="toctree-l1"><a class="reference internal" href="introduction.html">介绍</a></li>
 <li class="toctree-l1"><a class="reference internal" href="installation.html">安装</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">使用</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#fastapi-json-rpc">创建 FastAPI 应用并定义 JSON-RPC 方法</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#id2">运行示例</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#id3">客户端</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id2">基本的使用</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id3">运行示例</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id4">客户端</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id5">自定义消息解码器</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id6">运行示例</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id7">客户端</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id8">消息编码器默认支持</a></li>
 </ul>
 </li>
 </ul>
@@ -82,16 +86,21 @@
              
   <section id="id1">
 <h1>使用<a class="headerlink" href="#id1" title="Link to this heading"></a></h1>
-<section id="fastapi-json-rpc">
-<h2>创建 FastAPI 应用并定义 JSON-RPC 方法<a class="headerlink" href="#fastapi-json-rpc" title="Link to this heading"></a></h2>
+<section id="id2">
+<h2>基本的使用<a class="headerlink" href="#id2" title="Link to this heading"></a></h2>
 <p>在 <code class="docutils literal notranslate"><span class="pre">examples/basic/main.py</span></code> 中创建一个 FastAPI 应用，并定义一些 JSON-RPC 方法：</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">fastapi</span> <span class="kn">import</span> <span class="n">FastAPI</span>
 <span class="kn">from</span> <span class="nn">pydantic</span> <span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">Field</span>
 <span class="kn">from</span> <span class="nn">starlette.requests</span> <span class="kn">import</span> <span class="n">Request</span>
+<span class="kn">from</span> <span class="nn">krpc</span> <span class="kn">import</span> <span class="n">Entrypoint</span><span class="p">,</span> <span class="n">RpcException</span><span class="p">,</span> <span class="n">RpcErrorCode</span>
 
-<span class="kn">from</span> <span class="nn">krpc</span> <span class="kn">import</span> <span class="n">Entrypoint</span><span class="p">,</span> <span class="n">RpcException</span><span class="p">,</span> <span class="n">RpcErrorCode</span><span class="p">,</span> <span class="n">EncoderModelResponse</span>
 
-<span class="n">app</span> <span class="o">=</span> <span class="n">FastAPI</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s2">&quot;kylin-rpc API&quot;</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">OperationParams</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">a</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">json_schema_extra</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;example&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">},</span> <span class="n">description</span><span class="o">=</span><span class="s1">&#39;A 变量&#39;</span><span class="p">)</span>
+    <span class="n">b</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">json_schema_extra</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;example&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">},</span> <span class="n">description</span><span class="o">=</span><span class="s1">&#39;B 变量&#39;</span><span class="p">)</span>
+
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">FastAPI</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s2">&quot;Krpc API&quot;</span><span class="p">)</span>
 <span class="c1"># 创建一个 JSON-RPC 入口点</span>
 <span class="n">api_v1</span> <span class="o">=</span> <span class="n">Entrypoint</span><span class="p">(</span><span class="s1">&#39;/api/v1/jsonrpc&#39;</span><span class="p">)</span>
 
@@ -99,37 +108,25 @@
 <span class="c1"># 处理全局异常</span>
 <span class="nd">@app</span><span class="o">.</span><span class="n">exception_handler</span><span class="p">(</span><span class="n">RpcException</span><span class="p">)</span>
 <span class="k">async</span> <span class="k">def</span> <span class="nf">unicorn_exception_handler</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">Request</span><span class="p">,</span> <span class="n">exc</span><span class="p">:</span> <span class="n">RpcException</span><span class="p">):</span>
-    <span class="n">content_type</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;Content-Type&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
-    <span class="n">decoder</span> <span class="o">=</span> <span class="n">api_v1</span><span class="o">.</span><span class="n">decoders</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">content_type</span><span class="p">)</span> <span class="ow">or</span> <span class="n">api_v1</span><span class="o">.</span><span class="n">default_decoder</span>
-    <span class="n">decoder</span><span class="o">.</span><span class="n">create_response</span><span class="p">()</span>
-    <span class="k">return</span> <span class="n">EncoderModelResponse</span><span class="p">(</span>
-        <span class="n">error</span><span class="o">=</span><span class="n">exc</span><span class="o">.</span><span class="n">to_dict</span>
-    <span class="p">)</span>
-
-
-<span class="k">class</span> <span class="nc">AddParams</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-    <span class="n">a</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">example</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s1">&#39;A 变量&#39;</span><span class="p">)</span>
-    <span class="n">b</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">example</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s1">&#39;B 变量&#39;</span><span class="p">)</span>
+    <span class="n">message</span> <span class="o">=</span> <span class="n">api_v1</span><span class="o">.</span><span class="n">get_message</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">message</span><span class="o">.</span><span class="n">response_handle</span><span class="p">(</span><span class="n">error</span><span class="o">=</span><span class="n">exc</span><span class="o">.</span><span class="n">to_dict</span><span class="p">)</span>
 
 
 <span class="c1"># 定义一个 JSON-RPC 方法 add</span>
 <span class="nd">@api_v1</span><span class="o">.</span><span class="n">method</span>
-<span class="k">async</span> <span class="k">def</span> <span class="nf">add</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="n">AddParams</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-    <span class="n">a</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">a</span>
-    <span class="n">b</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">b</span>
-    <span class="k">if</span> <span class="n">a</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">b</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<span class="k">async</span> <span class="k">def</span> <span class="nf">add</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="n">OperationParams</span><span class="p">,</span> <span class="n">speak</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">speak</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">params</span><span class="o">.</span><span class="n">a</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">params</span><span class="o">.</span><span class="n">b</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">RpcException</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">RpcErrorCode</span><span class="o">.</span><span class="n">INVALID_PARAMS</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span>
+    <span class="k">return</span> <span class="n">params</span><span class="o">.</span><span class="n">a</span> <span class="o">+</span> <span class="n">params</span><span class="o">.</span><span class="n">b</span>
 
 
 <span class="c1"># 定义一个 JSON-RPC 方法 subtract</span>
 <span class="nd">@api_v1</span><span class="o">.</span><span class="n">method</span>
-<span class="k">async</span> <span class="k">def</span> <span class="nf">subtract</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="n">AddParams</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-    <span class="n">a</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">a</span>
-    <span class="n">b</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">b</span>
-    <span class="k">if</span> <span class="n">a</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">b</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<span class="k">async</span> <span class="k">def</span> <span class="nf">subtract</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="n">OperationParams</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">params</span><span class="o">.</span><span class="n">a</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">params</span><span class="o">.</span><span class="n">b</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">RpcException</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">RpcErrorCode</span><span class="o">.</span><span class="n">INVALID_PARAMS</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">a</span> <span class="o">-</span> <span class="n">b</span>
+    <span class="k">return</span> <span class="n">params</span><span class="o">.</span><span class="n">a</span> <span class="o">-</span> <span class="n">params</span><span class="o">.</span><span class="n">b</span>
 
 
 <span class="c1"># 将 JSON-RPC 入口点注册到 FastAPI 应用中</span>
@@ -143,54 +140,48 @@
 </pre></div>
 </div>
 </section>
-<section id="id2">
-<h2>运行示例<a class="headerlink" href="#id2" title="Link to this heading"></a></h2>
+<section id="id3">
+<h2>运行示例<a class="headerlink" href="#id3" title="Link to this heading"></a></h2>
 <p>确保已经安装了依赖，可以运行以下命令来启动服务：</p>
 <div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/basic/main.py
 </pre></div>
 </div>
 <p>现在，你可以发送 JSON-RPC 请求到 <code class="docutils literal notranslate"><span class="pre">http://localhost:8000/api/v1/jsonrpc</span></code> 来调用定义的方法。例如：</p>
-<p><strong>Add 方法请求</strong></p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;add&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;params&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;a&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;b&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">},</span>
-<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-<p><strong>Subtract 方法请求</strong></p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;method&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;subtract&quot;</span><span class="p">,</span>
-<span class="w">  </span><span class="nt">&quot;params&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;a&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;b&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">},</span>
-<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span>
-<span class="p">}</span>
-</pre></div>
-</div>
 </section>
-<section id="id3">
-<h2>客户端<a class="headerlink" href="#id3" title="Link to this heading"></a></h2>
-<p>在 <code class="docutils literal notranslate"><span class="pre">examples/basic/client.py</span></code> 中编写测试代码：</p>
+<section id="id4">
+<h2>客户端<a class="headerlink" href="#id4" title="Link to this heading"></a></h2>
+<p>在 <code class="docutils literal notranslate"><span class="pre">examples/basic/client.py</span></code> 中编写的代码：</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">asyncio</span>
+<span class="kn">from</span> <span class="nn">pydantic</span> <span class="kn">import</span> <span class="n">BaseModel</span>
 
-<span class="kn">from</span> <span class="nn">httpx</span> <span class="kn">import</span> <span class="n">AsyncClient</span>
+<span class="kn">from</span> <span class="nn">krpc</span> <span class="kn">import</span> <span class="n">RpcClient</span>
+
+
+<span class="k">class</span> <span class="nc">OperationParams</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">a</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">b</span><span class="p">:</span> <span class="nb">int</span>
+
+
+<span class="k">class</span> <span class="nc">AddParams</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">params</span><span class="p">:</span> <span class="n">OperationParams</span>
+    <span class="n">speak</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">model_config</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;method_name&#39;</span><span class="p">:</span> <span class="s1">&#39;add&#39;</span>
+    <span class="p">}</span>
 
 
 <span class="k">async</span> <span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
-    <span class="k">async</span> <span class="k">with</span> <span class="n">AsyncClient</span><span class="p">()</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
-        <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">&quot;http://127.0.0.1:8000/api/v1/jsonrpc&quot;</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="p">{</span>
-            <span class="s2">&quot;method&quot;</span><span class="p">:</span> <span class="s2">&quot;add&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;params&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;a&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">},</span>
-            <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="mi">1</span>
-        <span class="p">})</span>
-        <span class="n">response_json</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Response JSON: </span><span class="si">{</span><span class="n">response_json</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">&quot;http://127.0.0.1:8000/api/v1/jsonrpc&quot;</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="p">{</span>
-            <span class="s2">&quot;method&quot;</span><span class="p">:</span> <span class="s2">&quot;add&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;params&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;a&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">},</span>
-            <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="mi">2</span>
-        <span class="p">})</span>
-        <span class="n">response_json</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">text</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Response JSON: </span><span class="si">{</span><span class="n">response_json</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">rpc_client</span> <span class="o">=</span> <span class="n">RpcClient</span><span class="p">(</span><span class="n">url</span><span class="o">=</span><span class="s2">&quot;http://127.0.0.1:8000/api/v1/jsonrpc&quot;</span><span class="p">)</span>
+
+    <span class="n">params</span> <span class="o">=</span> <span class="n">AddParams</span><span class="p">(</span><span class="n">params</span><span class="o">=</span><span class="n">OperationParams</span><span class="p">(</span><span class="n">a</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mi">2</span><span class="p">),</span> <span class="n">speak</span><span class="o">=</span><span class="s2">&quot;hello&quot;</span><span class="p">)</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">rpc_client</span><span class="o">.</span><span class="n">call_model</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;同步调用结果: </span><span class="si">{</span><span class="n">response</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">rpc_client</span><span class="o">.</span><span class="n">call_model_async</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;异步调用结果: </span><span class="si">{</span><span class="n">response</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">response</span> <span class="o">=</span> <span class="n">rpc_client</span><span class="o">.</span><span class="n">call</span><span class="p">(</span><span class="s1">&#39;add&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;params&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;a&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">}})</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;同步少参调用结果: </span><span class="si">{</span><span class="n">response</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
 
 <span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">main</span><span class="p">())</span>
@@ -200,6 +191,202 @@
 <div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/basic/client.py
 </pre></div>
 </div>
+<p>如果不出意外你会看到类似如下输出:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>同步调用结果:<span class="w"> </span><span class="o">{</span><span class="s1">&#39;id&#39;</span>:<span class="w"> </span><span class="s1">&#39;8ad9a6cc-d332-4c3f-b6f8-ba734b773a34&#39;</span>,<span class="w"> </span><span class="s1">&#39;result&#39;</span>:<span class="w"> </span><span class="m">3</span>,<span class="w"> </span><span class="s1">&#39;error&#39;</span>:<span class="w"> </span>None<span class="o">}</span>
+异步调用结果:<span class="w"> </span><span class="o">{</span><span class="s1">&#39;id&#39;</span>:<span class="w"> </span><span class="s1">&#39;da25ef99-5fc4-4e01-8393-b3afad5a0eaa&#39;</span>,<span class="w"> </span><span class="s1">&#39;result&#39;</span>:<span class="w"> </span><span class="m">3</span>,<span class="w"> </span><span class="s1">&#39;error&#39;</span>:<span class="w"> </span>None<span class="o">}</span>
+同步少参调用结果:<span class="w"> </span><span class="o">{</span><span class="s1">&#39;id&#39;</span>:<span class="w"> </span><span class="s1">&#39;16a913d6-8930-4178-ae1c-ce9ee757883e&#39;</span>,<span class="w"> </span><span class="s1">&#39;result&#39;</span>:<span class="w"> </span>None,<span class="w"> </span><span class="s1">&#39;error&#39;</span>:<span class="w"> </span><span class="o">{</span><span class="s1">&#39;code&#39;</span>:<span class="w"> </span>-32602,<span class="w"> </span><span class="s1">&#39;message&#39;</span>:<span class="w"> </span><span class="s1">&#39;Invalid params&#39;</span>,<span class="w"> </span><span class="s1">&#39;data&#39;</span>:<span class="w"> </span><span class="s1">&#39;Missing required parameter: speak&#39;</span><span class="o">}}</span>
+</pre></div>
+</div>
+</section>
+<section id="id5">
+<h2>自定义消息解码器<a class="headerlink" href="#id5" title="Link to this heading"></a></h2>
+<p>在 <code class="docutils literal notranslate"><span class="pre">examples/cust_messages/cust_messages.py</span></code> 例子中继承于 Message 编写自定义 GzipJsonMessage 消息解码器：</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">io</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span>
+<span class="kn">from</span> <span class="nn">krpc</span> <span class="kn">import</span> <span class="n">Message</span><span class="p">,</span> <span class="n">message_management</span>
+<span class="kn">import</span> <span class="nn">gzip</span>
+
+
+<span class="c1"># 自定义加解码器</span>
+<span class="k">class</span> <span class="nc">GzipJsonMessage</span><span class="p">(</span><span class="n">Message</span><span class="p">):</span>
+    <span class="n">rpc_media_type</span> <span class="o">=</span> <span class="s2">&quot;gzip-json&quot;</span>
+
+    <span class="k">def</span> <span class="nf">decode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        使用gzip解压缩数据，并尝试将其反序列化为字典</span>
+<span class="sd">        :param data: 压缩的字节数据</span>
+<span class="sd">        :return: 反序列化后的字典</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># 使用gzip解压缩</span>
+        <span class="n">buffer</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">gzip</span><span class="o">.</span><span class="n">GzipFile</span><span class="p">(</span><span class="n">fileobj</span><span class="o">=</span><span class="n">buffer</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">un_gzipped_data</span><span class="p">:</span>
+            <span class="n">data_json_bytes</span> <span class="o">=</span> <span class="n">un_gzipped_data</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+
+        <span class="c1"># 将解压缩后的字节串反序列化为字典</span>
+        <span class="n">data_dict</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">data_json_bytes</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">data_dict</span>
+
+    <span class="k">def</span> <span class="nf">encode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">bytes</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># 将字典转换为JSON格式的字节串</span>
+        <span class="n">data_json_bytes</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span>
+        <span class="n">buffer</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">()</span>
+        <span class="k">with</span> <span class="n">gzip</span><span class="o">.</span><span class="n">GzipFile</span><span class="p">(</span><span class="n">fileobj</span><span class="o">=</span><span class="n">buffer</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">gzipped_data</span><span class="p">:</span>
+            <span class="n">gzipped_data</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">data_json_bytes</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">buffer</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span>
+
+
+<span class="c1"># 添加 GzipJsonMessage 实例到 message_management 字典中</span>
+<span class="n">message_management</span><span class="p">[</span><span class="s1">&#39;gzip-json&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">GzipJsonMessage</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>在 <code class="docutils literal notranslate"><span class="pre">examples/cust_messages/main.py</span></code> 例子中创建一个 FastAPI 应用，并定义一些 GzipJSON-RPC 方法：</p>
+<ul class="simple">
+<li></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">fastapi</span> <span class="kn">import</span> <span class="n">FastAPI</span>
+<span class="kn">from</span> <span class="nn">pydantic</span> <span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">Field</span>
+<span class="kn">from</span> <span class="nn">starlette.requests</span> <span class="kn">import</span> <span class="n">Request</span>
+<span class="kn">from</span> <span class="nn">krpc</span> <span class="kn">import</span> <span class="n">Entrypoint</span><span class="p">,</span> <span class="n">RpcException</span><span class="p">,</span> <span class="n">RpcErrorCode</span>
+<span class="kn">from</span> <span class="nn">cust_messages</span> <span class="kn">import</span> <span class="n">message_management</span>
+
+
+<span class="k">class</span> <span class="nc">OperationParams</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">a</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">json_schema_extra</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;example&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">},</span> <span class="n">description</span><span class="o">=</span><span class="s1">&#39;A 变量&#39;</span><span class="p">)</span>
+    <span class="n">b</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">json_schema_extra</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;example&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">},</span> <span class="n">description</span><span class="o">=</span><span class="s1">&#39;B 变量&#39;</span><span class="p">)</span>
+
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">FastAPI</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s2">&quot;Krpc API&quot;</span><span class="p">)</span>
+<span class="c1"># 创建一个 GzipJSON-RPC 入口点</span>
+<span class="n">api_v1</span> <span class="o">=</span> <span class="n">Entrypoint</span><span class="p">(</span>
+    <span class="s1">&#39;/api/v1/gzip/jsonrpc&#39;</span><span class="p">,</span>
+    <span class="n">cust_messages</span><span class="o">=</span><span class="n">message_management</span>  <span class="c1"># &lt;== 添加我们自定义消息加解码器管理</span>
+<span class="p">)</span>
+
+
+<span class="c1"># 处理全局异常</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">exception_handler</span><span class="p">(</span><span class="n">RpcException</span><span class="p">)</span>
+<span class="k">async</span> <span class="k">def</span> <span class="nf">unicorn_exception_handler</span><span class="p">(</span><span class="n">request</span><span class="p">:</span> <span class="n">Request</span><span class="p">,</span> <span class="n">exc</span><span class="p">:</span> <span class="n">RpcException</span><span class="p">):</span>
+    <span class="n">message</span> <span class="o">=</span> <span class="n">api_v1</span><span class="o">.</span><span class="n">get_message</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">message</span><span class="o">.</span><span class="n">response_handle</span><span class="p">(</span><span class="n">error</span><span class="o">=</span><span class="n">exc</span><span class="o">.</span><span class="n">to_dict</span><span class="p">)</span>
+
+
+<span class="c1"># 定义一个 GzipJSON-RPC 方法 add</span>
+<span class="nd">@api_v1</span><span class="o">.</span><span class="n">method</span>
+<span class="k">async</span> <span class="k">def</span> <span class="nf">add</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="n">OperationParams</span><span class="p">,</span> <span class="n">speak</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">speak</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">params</span><span class="o">.</span><span class="n">a</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">params</span><span class="o">.</span><span class="n">b</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">RpcException</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">RpcErrorCode</span><span class="o">.</span><span class="n">INVALID_PARAMS</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">params</span><span class="o">.</span><span class="n">a</span> <span class="o">+</span> <span class="n">params</span><span class="o">.</span><span class="n">b</span>
+
+
+<span class="c1"># 定义一个 GzipJSON-RPC 方法 subtract</span>
+<span class="nd">@api_v1</span><span class="o">.</span><span class="n">method</span>
+<span class="k">async</span> <span class="k">def</span> <span class="nf">subtract</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="n">OperationParams</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">params</span><span class="o">.</span><span class="n">a</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">params</span><span class="o">.</span><span class="n">b</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">RpcException</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">RpcErrorCode</span><span class="o">.</span><span class="n">INVALID_PARAMS</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">params</span><span class="o">.</span><span class="n">a</span> <span class="o">-</span> <span class="n">params</span><span class="o">.</span><span class="n">b</span>
+
+
+<span class="c1"># 将 GzipJSON-RPC 入口点注册到 FastAPI 应用中</span>
+<span class="n">app</span><span class="o">.</span><span class="n">include_router</span><span class="p">(</span><span class="n">api_v1</span><span class="p">)</span>
+
+<span class="c1"># 运行应用</span>
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">uvicorn</span>
+
+    <span class="n">uvicorn</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">host</span><span class="o">=</span><span class="s2">&quot;0.0.0.0&quot;</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">8000</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="id6">
+<h2>运行示例<a class="headerlink" href="#id6" title="Link to this heading"></a></h2>
+<p>确保已经安装了依赖，可以运行以下命令来启动服务：</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/cust_messages/main.py
+</pre></div>
+</div>
+<p>现在，你可以发送  GzipJSON-RPC 请求到 <code class="docutils literal notranslate"><span class="pre">http://localhost:8000/api/v1/gzip/jsonrpc</span></code> 来调用定义的方法。例如：</p>
+</section>
+<section id="id7">
+<h2>客户端<a class="headerlink" href="#id7" title="Link to this heading"></a></h2>
+<p>在 <code class="docutils literal notranslate"><span class="pre">examples/cust_messages/client.py</span></code> 中编写的代码：</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">asyncio</span>
+<span class="kn">from</span> <span class="nn">pydantic</span> <span class="kn">import</span> <span class="n">BaseModel</span>
+
+<span class="kn">from</span> <span class="nn">krpc</span> <span class="kn">import</span> <span class="n">RpcClient</span>
+
+
+<span class="k">class</span> <span class="nc">OperationParams</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">a</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">b</span><span class="p">:</span> <span class="nb">int</span>
+
+
+<span class="k">class</span> <span class="nc">AddParams</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+    <span class="n">params</span><span class="p">:</span> <span class="n">OperationParams</span>
+    <span class="n">speak</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">model_config</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;method_name&#39;</span><span class="p">:</span> <span class="s1">&#39;add&#39;</span>
+    <span class="p">}</span>
+
+
+<span class="k">async</span> <span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+    <span class="n">rpc_client</span> <span class="o">=</span> <span class="n">RpcClient</span><span class="p">(</span>
+        <span class="n">url</span><span class="o">=</span><span class="s2">&quot;http://127.0.0.1:8000/api/v1/gzip/jsonrpc&quot;</span><span class="p">,</span>
+        <span class="n">rpc_media_type</span><span class="o">=</span><span class="s1">&#39;gzip-json&#39;</span><span class="p">,</span>  <span class="c1"># &lt;== 指定我们自定义的加解码器</span>
+    <span class="p">)</span>
+
+    <span class="n">params</span> <span class="o">=</span> <span class="n">AddParams</span><span class="p">(</span><span class="n">params</span><span class="o">=</span><span class="n">OperationParams</span><span class="p">(</span><span class="n">a</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mi">2</span><span class="p">),</span> <span class="n">speak</span><span class="o">=</span><span class="s2">&quot;hello&quot;</span><span class="p">)</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">rpc_client</span><span class="o">.</span><span class="n">call_model</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;同步调用结果: </span><span class="si">{</span><span class="n">response</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">rpc_client</span><span class="o">.</span><span class="n">call_model_async</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;异步调用结果: </span><span class="si">{</span><span class="n">response</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">response</span> <span class="o">=</span> <span class="n">rpc_client</span><span class="o">.</span><span class="n">call</span><span class="p">(</span><span class="s1">&#39;add&#39;</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;params&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;a&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">}})</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;同步少参调用结果: </span><span class="si">{</span><span class="n">response</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+
+<span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">main</span><span class="p">())</span>
+</pre></div>
+</div>
+<p>运行：</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>examples/cust_messages/client.py
+</pre></div>
+</div>
+<p>如果不出意外你会看到类似如下输出:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>同步调用结果:<span class="w"> </span><span class="o">{</span><span class="s1">&#39;id&#39;</span>:<span class="w"> </span><span class="s1">&#39;8ad9a6cc-d332-4c3f-b6f8-ba734b773a34&#39;</span>,<span class="w"> </span><span class="s1">&#39;result&#39;</span>:<span class="w"> </span><span class="m">3</span>,<span class="w"> </span><span class="s1">&#39;error&#39;</span>:<span class="w"> </span>None<span class="o">}</span>
+异步调用结果:<span class="w"> </span><span class="o">{</span><span class="s1">&#39;id&#39;</span>:<span class="w"> </span><span class="s1">&#39;da25ef99-5fc4-4e01-8393-b3afad5a0eaa&#39;</span>,<span class="w"> </span><span class="s1">&#39;result&#39;</span>:<span class="w"> </span><span class="m">3</span>,<span class="w"> </span><span class="s1">&#39;error&#39;</span>:<span class="w"> </span>None<span class="o">}</span>
+同步少参调用结果:<span class="w"> </span><span class="o">{</span><span class="s1">&#39;id&#39;</span>:<span class="w"> </span><span class="s1">&#39;16a913d6-8930-4178-ae1c-ce9ee757883e&#39;</span>,<span class="w"> </span><span class="s1">&#39;result&#39;</span>:<span class="w"> </span>None,<span class="w"> </span><span class="s1">&#39;error&#39;</span>:<span class="w"> </span><span class="o">{</span><span class="s1">&#39;code&#39;</span>:<span class="w"> </span>-32602,<span class="w"> </span><span class="s1">&#39;message&#39;</span>:<span class="w"> </span><span class="s1">&#39;Invalid params&#39;</span>,<span class="w"> </span><span class="s1">&#39;data&#39;</span>:<span class="w"> </span><span class="s1">&#39;Missing required parameter: speak&#39;</span><span class="o">}}</span>
+</pre></div>
+</div>
+</section>
+<section id="id8">
+<h2>消息编码器默认支持<a class="headerlink" href="#id8" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">krpc</span></code> 内置支持以下几种消息编码器</p></li>
+<li><p>允许编码器自定义，以满足多样化的数据传输和存储需求：</p></li>
+</ul>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>编码器名称</p></th>
+<th class="head"><p>媒体类型</p></th>
+<th class="head"><p>特点</p></th>
+<th class="head"><p>适用场景</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>JSON</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">json</span></code></p></td>
+<td><p>简洁、可读性强、广泛支持</p></td>
+<td><p>数据交换、配置文件、日志记录</p></td>
+</tr>
+<tr class="row-odd"><td><p>MessagePack</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">msgpack</span></code></p></td>
+<td><p>高效、体积小、速度快</p></td>
+<td><p>性能关键型应用、移动应用、游戏</p></td>
+</tr>
+</tbody>
+</table>
 </section>
 </section>
 
