@@ -2,7 +2,7 @@
 name = "kylin-rpc"
 version = "0.0.2"
 description = "RPC implementation for FastAPI"
-authors = ["Kylin <your.email@example.com>"]
+authors = ["Kylin <260987762@qq.com>"]
 license = "MIT"
 readme = "README.md"
 packages = [
@@ -26,7 +26,6 @@ classifiers = [
     "Framework :: FastAPI",
     "Framework :: Pydantic",
     "Framework :: Pydantic :: 2",
-    "Framework :: Krpc",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
